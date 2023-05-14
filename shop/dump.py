@@ -61,7 +61,7 @@ class Dumper(caseus.Client):
     SHOP_INFO_FILE = "shop_info.json"
 
     def __init__(self, archive_dir, **kwargs):
-        super().__init__(**kwargs)
+        super().__init__(connect_to_satellite=False, **kwargs)
 
         self.archive_dir = Path(archive_dir)
 
@@ -119,10 +119,6 @@ class Dumper(caseus.Client):
     async def on_login(self, server, packet):
         await self.load_shop()
 
-    # Overwrite to disable connecting to the satellite server.
-    def _on_change_satellite_server(self, server, packet):
-        pass
-
     @pak.packet_listener(caseus.clientbound.ShopBaseTimestampPacket)
     async def set_base_timestamp(self, server, packet):
         self.base_timestamp = packet.timestamp
@@ -145,7 +141,7 @@ class Dumper(caseus.Client):
         await self.main.wait_closed()
 
         assert len(packet.owned_items)          == 0
-        assert len(packet.owned_outfit_codes)   == 0
+        assert len(packet.owned_outfit_looks)   == 0
         assert len(packet.owned_shaman_objects) == 0
         assert len(packet.owned_emoji_ids)      == 0
 
@@ -205,7 +201,7 @@ class Dumper(caseus.Client):
             for outfit in packet.outfits:
                 shop_info["outfits"].append(dict(
                     outfit_id  = outfit.outfit_id,
-                    look       = outfit.outfit_code,
+                    look       = outfit.look,
                     background = outfit.background.value,
                 ))
 
