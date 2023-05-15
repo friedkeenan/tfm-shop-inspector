@@ -17,7 +17,18 @@ class Dumper(caseus.Client):
     TRANSFORMICE_SWF_URL          = "http://www.transformice.com/Transformice.swf"
     TRANSFORMICE_CHARGEUR_SWF_URL = "http://www.transformice.com/TransformiceChargeur.swf"
 
-    LIBRARY_URL = "http://www.transformice.com/images/x_bibliotheques/"
+    TRANSLATIONS_URL_FMT = "http://www.transformice.com/langues/tfm-{language}.gz"
+
+    IMAGES_URL = "http://www.transformice.com/images/"
+
+    MISC_IMAGES = [
+        "x_transformice/x_interface/x_tag-collector.png",
+
+        "M_0.png",
+        "M_1.png",
+    ]
+
+    LIBRARY_PATH = "x_bibliotheques/"
 
     STATIC_FUR_LIBRARIES = [
         "x_fourrures.swf",
@@ -74,6 +85,7 @@ class Dumper(caseus.Client):
         # This is how the game stores them.
         self.special_offers = {}
 
+        self.language_codes   = None
         self.load_shop_packet = None
 
     @property
@@ -96,8 +108,14 @@ class Dumper(caseus.Client):
                 async with session.get(url) as response:
                     await f.write(await response.read())
 
+    async def download_translations(self, language):
+        await self.download(self.TRANSLATIONS_URL_FMT.format(language=language))
+
+    async def download_image(self, image):
+        await self.download(self.IMAGES_URL + image)
+
     async def download_library(self, library):
-        await self.download(self.LIBRARY_URL + library)
+        await self.download_image(self.LIBRARY_PATH + library)
 
     async def download_specific_fur(self, fur_id):
         await self.download_library(self.SPECIFIC_FUR_LIBRARY_FMT.format(fur_id=fur_id))
@@ -131,6 +149,16 @@ class Dumper(caseus.Client):
             tg.create_task(
                 self.download(self.TRANSFORMICE_CHARGEUR_SWF_URL)
             )
+
+            for image in self.MISC_IMAGES:
+                tg.create_task(
+                    self.download_image(image)
+                )
+
+            for code in self.language_codes:
+                tg.create_task(
+                    self.download_translations(code)
+                )
 
             for library in itertools.chain(
                 self.STATIC_FUR_LIBRARIES,
@@ -213,12 +241,20 @@ class Dumper(caseus.Client):
 
             tg.create_task(write_shop_info())
 
-    async def load_shop(self):
-        await self.main.write_packet(caseus.serverbound.LoadShopPacket)
+    @pak.packet_listener(caseus.serverbound.HandshakePacket, outgoing=True)
+    async def request_languages(self, server, packet):
+        await self.main.write_packet(caseus.serverbound.AvailableLanguagesPacket)
+
+    @pak.packet_listener(caseus.clientbound.AvailableLanguagesPacket)
+    async def on_available_languages(self, server, packet):
+        self.language_codes = [language.code for language in packet.languages]
+
+        if self.load_shop_packet is not None:
+            self.main.close()
 
     @pak.packet_listener(caseus.clientbound.LoginSuccessPacket)
     async def on_login(self, server, packet):
-        await self.load_shop()
+        await self.main.write_packet(caseus.serverbound.LoadShopPacket)
 
     @pak.packet_listener(caseus.clientbound.ShopBaseTimestampPacket)
     async def set_base_timestamp(self, server, packet):
@@ -238,15 +274,15 @@ class Dumper(caseus.Client):
 
     @pak.packet_listener(caseus.clientbound.LoadShopPacket)
     async def on_load_shop(self, server, packet):
-        self.main.close()
-        await self.main.wait_closed()
-
         assert len(packet.owned_items)          == 0
         assert len(packet.owned_outfit_looks)   == 0
         assert len(packet.owned_shaman_objects) == 0
         assert len(packet.owned_emoji_ids)      == 0
 
         self.load_shop_packet = packet
+
+        if self.language_codes is not None:
+            self.main.close()
 
 if __name__ == "__main__":
     import config
