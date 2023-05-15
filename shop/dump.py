@@ -74,6 +74,8 @@ class Dumper(caseus.Client):
         # This is how the game stores them.
         self.special_offers = {}
 
+        self.load_shop_packet = None
+
     @property
     def shop_info_path(self):
         return self.archive_dir / self.SHOP_INFO_FILE
@@ -112,39 +114,6 @@ class Dumper(caseus.Client):
 
         await super().on_start()
 
-    async def load_shop(self):
-        await self.main.write_packet(caseus.serverbound.LoadShopPacket)
-
-    @pak.packet_listener(caseus.clientbound.LoginSuccessPacket)
-    async def on_login(self, server, packet):
-        await self.load_shop()
-
-    @pak.packet_listener(caseus.clientbound.ShopBaseTimestampPacket)
-    async def set_base_timestamp(self, server, packet):
-        self.base_timestamp = packet.timestamp
-
-    @pak.packet_listener(caseus.clientbound.ShopSpecialOfferPacket)
-    async def on_special_offer(self, server, packet):
-        if packet.enable:
-            self.special_offers[packet.item_id * (1 if packet.is_regular_item else -1)] = packet
-
-        else:
-            try:
-                del self.special_offers[packet.item_id * (1 if packet.is_regular_item else -1)]
-
-            except KeyError:
-                pass
-
-    @pak.packet_listener(caseus.clientbound.LoadShopPacket)
-    async def on_load_shop(self, server, packet):
-        self.main.close()
-        await self.main.wait_closed()
-
-        assert len(packet.owned_items)          == 0
-        assert len(packet.owned_outfit_looks)   == 0
-        assert len(packet.owned_shaman_objects) == 0
-        assert len(packet.owned_emoji_ids)      == 0
-
         shop_info = dict(
             base_timestamp = self.base_timestamp,
             special_offers = [],
@@ -181,7 +150,7 @@ class Dumper(caseus.Client):
                     discount_percentage = offer.discount_percentage,
                 ))
 
-            for item in packet.items:
+            for item in self.load_shop_packet.items:
                 shop_info["items"].append(dict(
                     category_id = item.category_id,
                     item_id     = item.item_id,
@@ -198,14 +167,14 @@ class Dumper(caseus.Client):
                         self.download_specific_fur(item.item_id)
                     )
 
-            for outfit in packet.outfits:
+            for outfit in self.load_shop_packet.outfits:
                 shop_info["outfits"].append(dict(
                     outfit_id  = outfit.outfit_id,
                     look       = outfit.look,
                     background = outfit.background.value,
                 ))
 
-            for shaman_object in packet.shaman_objects:
+            for shaman_object in self.load_shop_packet.shaman_objects:
                 shop_info["shaman_objects"].append(dict(
                     shaman_object_id = shaman_object.shaman_object_id,
                     num_colors       = shaman_object.num_colors,
@@ -225,7 +194,7 @@ class Dumper(caseus.Client):
                         self.download_specific_shaman_object(base_id, skin_id)
                     )
 
-            for emoji in packet.emojis:
+            for emoji in self.load_shop_packet.emojis:
                 shop_info["emojis"].append(dict(
                     emoji_id    = emoji.emoji_id,
                     cheese_cost = emoji.cheese_cost,
@@ -243,6 +212,41 @@ class Dumper(caseus.Client):
                     await f.write(json.dumps(shop_info, separators=(",", ":")))
 
             tg.create_task(write_shop_info())
+
+    async def load_shop(self):
+        await self.main.write_packet(caseus.serverbound.LoadShopPacket)
+
+    @pak.packet_listener(caseus.clientbound.LoginSuccessPacket)
+    async def on_login(self, server, packet):
+        await self.load_shop()
+
+    @pak.packet_listener(caseus.clientbound.ShopBaseTimestampPacket)
+    async def set_base_timestamp(self, server, packet):
+        self.base_timestamp = packet.timestamp
+
+    @pak.packet_listener(caseus.clientbound.ShopSpecialOfferPacket)
+    async def on_special_offer(self, server, packet):
+        if packet.enable:
+            self.special_offers[packet.item_id * (1 if packet.is_regular_item else -1)] = packet
+
+        else:
+            try:
+                del self.special_offers[packet.item_id * (1 if packet.is_regular_item else -1)]
+
+            except KeyError:
+                pass
+
+    @pak.packet_listener(caseus.clientbound.LoadShopPacket)
+    async def on_load_shop(self, server, packet):
+        self.main.close()
+        await self.main.wait_closed()
+
+        assert len(packet.owned_items)          == 0
+        assert len(packet.owned_outfit_looks)   == 0
+        assert len(packet.owned_shaman_objects) == 0
+        assert len(packet.owned_emoji_ids)      == 0
+
+        self.load_shop_packet = packet
 
 if __name__ == "__main__":
     import config
