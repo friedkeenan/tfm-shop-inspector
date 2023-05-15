@@ -58,7 +58,7 @@ class Dumper(caseus.Client):
 
     EMOJI_URL_FMT = "http://www.transformice.com/images/x_transformice/x_smiley/{emoji_id}.png"
 
-    SHOP_INFO_FILE = "shop_info.json"
+    SHOP_INFO_FILE = "shop-info.json"
 
     def __init__(self, archive_dir, **kwargs):
         super().__init__(connect_to_satellite=False, **kwargs)
