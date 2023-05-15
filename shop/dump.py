@@ -193,7 +193,7 @@ class Dumper(caseus.Client):
                     needed_item = item.needed_item,
                 ))
 
-                if item.category_id in (22, 23) and item.item_id > self.MAX_STATIC_FUR_ID:
+                if item.category_id == 22 and item.item_id > self.MAX_STATIC_FUR_ID:
                     tg.create_task(
                         self.download_specific_fur(item.item_id)
                     )
@@ -217,7 +217,7 @@ class Dumper(caseus.Client):
 
                 base_id, skin_id = caseus.game.shaman_object_id_parts(shaman_object.shaman_object_id)
                 if (
-                    base_id in self.MAX_STATIC_SHAMAN_OBJECT_SKIN_ID and
+                    base_id not in self.MAX_STATIC_SHAMAN_OBJECT_SKIN_ID or
 
                     skin_id > self.MAX_STATIC_SHAMAN_OBJECT_SKIN_ID[base_id]
                 ):
