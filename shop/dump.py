@@ -67,7 +67,7 @@ class Dumper(caseus.Client):
 
     SPECIFIC_SHAMAN_OBJECT_LIBRARY_FMT = "chamanes/o{base_id},{skin_id}.swf"
 
-    EMOJI_URL_FMT = "http://www.transformice.com/images/x_transformice/x_smiley/{emoji_id}.png"
+    EMOJI_PATH_FMT = "x_transformice/x_smiley/{emoji_id}.png"
 
     SHOP_INFO_FILE = "shop-info.json"
 
@@ -124,7 +124,7 @@ class Dumper(caseus.Client):
         await self.download_library(self.SPECIFIC_SHAMAN_OBJECT_LIBRARY_FMT.format(base_id=base_id, skin_id=skin_id))
 
     async def download_emoji(self, emoji_id):
-        await self.download(self.EMOJI_URL_FMT.format(emoji_id=emoji_id))
+        await self.download_image(self.EMOJI_PATH_FMT.format(emoji_id=emoji_id))
 
     async def on_start(self):
         if await aiofiles.os.path.exists(self.archive_dir):
