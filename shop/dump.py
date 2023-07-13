@@ -54,7 +54,7 @@ class Dumper(caseus.Client):
     MAX_STATIC_SHAMAN_OBJECT_SKIN_ID = {
         # Base ID: Skin ID.
 
-        1:  142,
+        1:  42,
         2:  46,
         3:  40,
         4:  43,
