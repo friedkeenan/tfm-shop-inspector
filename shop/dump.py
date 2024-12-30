@@ -235,7 +235,7 @@ class Dumper(caseus.Client):
                 )
 
             async def write_shop_info():
-                await aiofiles.os.makedirs(self.shop_info_path.parent, exist_ok = True)
+                await aiofiles.os.makedirs(self.shop_info_path.parent, exist_ok=True)
                 async with aiofiles.open(self.shop_info_path, "w") as f:
                     await f.write(json.dumps(shop_info, separators=(",", ":")))
 
@@ -247,7 +247,7 @@ class Dumper(caseus.Client):
 
     @pak.packet_listener(caseus.clientbound.AvailableLanguagesPacket)
     async def on_available_languages(self, server, packet):
-        self.language_codes = [language.code for language in packet.languages]
+        self.language_codes = ["int", *(language.code for language in packet.languages)]
 
         if self.load_shop_packet is not None:
             self.main.close()
